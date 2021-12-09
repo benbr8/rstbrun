@@ -45,7 +45,7 @@ fn main() {
         None => current_dir.join(".sim_build"),
     };
 
-    let mut target_paths = Vec::new(); 
+    let mut target_paths = Vec::new();
     for val in cla.values_of("target").unwrap() {
         let path = current_dir.join(val);
         if !path.is_dir() {
@@ -64,10 +64,11 @@ fn main() {
     for target_path in target_paths {
         find_tests_in_path(target_path, &mut test_paths);
     }
-    // dbg!(test_paths);
+    dbg!(&test_paths);
 
     // retrieve test names
     let test_names = get_test_names(&test_paths);
+    dbg!(&test_names);
 
     // parse rstb.toml
     let mut test_configs = Vec::new();
@@ -78,24 +79,81 @@ fn main() {
 
     // compile tests
     for test_path in &test_paths {
-        let mut cmd = std::process::Command::new("cargo")
-            .env("CARGO_TARGET_DIR", rstb_build_dir.as_os_str())
+        let mut proc = std::process::Command::new("cargo")
+            .env("CARGO_TARGET_DIR", &rstb_build_dir.as_os_str())
             .current_dir(test_path)
             .stdout(std::process::Stdio::inherit())
             .args(vec!["build", "--release"])
             .spawn().unwrap();
-        cmd.wait().unwrap();
+        proc.wait().unwrap();
     }
 
     // Compile sources
     let _ = std::fs::remove_dir_all(&sim_build_dir);
     for j in 0..test_paths.len() {
-        let _ = std::fs::create_dir_all(&sim_build_dir.join(&test_names[j]));
-        // let mut cmd = std::process::Command::new("program")
+        let sim_dir = sim_build_dir.join(&test_names[j]);
+        let config = &test_configs[j];
+        std::fs::create_dir_all(&sim_dir).unwrap();
+        let mut args: Vec<String> = Vec::new();
+        let out_file = sim_dir.join("sim.vvp").into_os_string().into_string().unwrap();
+        args.append(&mut vec![
+            "-o".to_string(),
+            out_file,
+            "-s".to_string(),
+            config.test.toplevel.clone(),
+            "-g2012".to_string(),
+        ]);
+
+        let hdl_files = &config.src.verilog.clone().unwrap();
+        for f in hdl_files {
+            let s = test_paths[j].join(f).into_os_string().into_string().unwrap();
+            args.push(s);
+        }
+        let mut proc = std::process::Command::new("iverilog")
+            .current_dir(sim_dir.clone())
+            .stdout(std::process::Stdio::inherit())
+            .args(&args)
+            .spawn().unwrap();
+        proc.wait().unwrap();
+    }
+
+    // Run tests
+    for name in &test_names {
+        println!("\n\n\n");
+        println!("###################################################################");
+        println!("# RUNNING TEST: {}", name);
+        println!("###################################################################\n");
+        // rename libs for iverilog
+        let mut lib_name = "lib".to_string();
+        lib_name.push_str(name);
+        let mut lib_name_iverilog = lib_name.clone();
+        lib_name_iverilog.push_str(".vpi");
+        let mut lib_name_so = lib_name.clone();
+        lib_name_so.push_str(".so");
+
+        let sim_dir = sim_build_dir.join(name);
+        let lib_path_iverilog = rstb_build_dir.join("release").join(&lib_name_iverilog);
+        let lib_path_so = rstb_build_dir.join("release").join(&lib_name_so);
+        let _ = std::fs::remove_file(&lib_path_iverilog);
+        std::fs::copy(lib_path_so, &lib_path_iverilog).unwrap();
+
+        // run tests
+        let rstb_build_dir_string = rstb_build_dir.join("release").into_os_string().into_string().unwrap();
+        let test_bin = sim_dir.join("sim.vvp").into_os_string().into_string().unwrap();
+        let mut proc = std::process::Command::new("vvp")
+            .current_dir(sim_build_dir.join(name))
+            .stdout(std::process::Stdio::inherit())
+            .args(vec![
+                "-M".to_string(),
+                rstb_build_dir_string,
+                "-m".to_string(),
+                lib_name,
+                test_bin,
+            ])
+            .spawn().unwrap();
+        proc.wait().unwrap();
     }
 }
-
-
 
 fn get_test_names(test_paths: &Vec<PathBuf>) -> Vec<String> {
     let re_crate_name = Regex::new(r#"name = "(\S*)""#).unwrap();

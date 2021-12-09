@@ -5,18 +5,18 @@ use toml;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    test: Test,
-    src: Src,
+    pub test: Test,
+    pub src: Src,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Src {
-    verilog: Option<Vec<String>>,
+    pub verilog: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Test {
-    toplevel: String,
+    pub toplevel: String,
 }
 
 
@@ -24,6 +24,6 @@ pub struct Test {
 pub fn parse_rstb_toml(file: &PathBuf) -> Config {
     let cfg_str = std::fs::read_to_string(file).expect("Could not read rstb.toml file.");
     let config: Config = toml::from_str(&cfg_str).unwrap();
-    dbg!(&config);
+    // dbg!(&config);
     config
 }
