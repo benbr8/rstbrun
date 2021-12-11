@@ -2,6 +2,12 @@
 name = "rstbrun"
 version = "0.1.0"
 edition = "2021"
+authors = ["Benjamin Blase"]
+description = "Build and run Rstb tests with Icarus Verilog"
+readme = "README.md"
+repository = "https://github.com/benbr8/rstbrun"
+license = "GPL-2.0"
+keywords = ["eda", "verilog"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
