@@ -23,7 +23,7 @@ pub struct Test {
 
 pub fn parse_rstb_toml(file: &PathBuf) -> Config {
     let cfg_str = std::fs::read_to_string(file).expect("Could not read rstb.toml file.");
-    let config: Config = toml::from_str(&cfg_str).unwrap();
+    let config: Config = toml::from_str(&cfg_str).expect("Could not parse 'rstb.toml'.");
     // dbg!(&config);
     config
 }
