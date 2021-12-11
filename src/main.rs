@@ -23,7 +23,7 @@ fn main() {
         .arg(Arg::with_name("sim-build")
             .long("sim-build")
             .value_name("FOLDER")
-            .help("Folder where cargo build products are placed")
+            .help("Folder where simulator build products are placed")
             .takes_value(true)
         ).get_matches();
 
@@ -64,11 +64,11 @@ fn main() {
     for target_path in target_paths {
         find_tests_in_path(target_path, &mut test_paths);
     }
-    dbg!(&test_paths);
+    // dbg!(&test_paths);
 
     // retrieve test names
     let test_names = get_test_names(&test_paths);
-    dbg!(&test_names);
+    // dbg!(&test_names);
 
     // parse rstb.toml
     let mut test_configs = Vec::new();
