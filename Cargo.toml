@@ -1,6 +1,6 @@
 [package]
 name = "rstbrun"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Benjamin Blase"]
 description = "Build and run Rstb tests with Icarus Verilog"
