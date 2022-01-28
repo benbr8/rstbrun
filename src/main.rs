@@ -1,4 +1,5 @@
 mod config;
+mod simulator;
 
 use clap::{App, Arg};
 use fancy_regex::Regex;
@@ -9,6 +10,10 @@ fn main() {
         .version("0.1.0")
         .author("benbr8")
         .about("Executes Rstb tests and aggregates results.")
+        .arg(Arg::with_name("simulator")
+            .value_name("SIMULATOR")
+            .help("Simulator to run the simulation.")
+            .takes_value(true))
         .arg(Arg::with_name("target")
             .value_name("FOLDER")
             .help("Path(s) to test(s). Defaults to current directory.")
@@ -36,6 +41,11 @@ fn main() {
     let compile_only = cla.is_present("compile-only");
 
     let current_dir = std::env::current_dir().expect("Could not get working directory path.");
+
+    let simulator = match cla.value_of("simulator") {
+        Some(sim) => sim,
+        None => "icarus"
+    };
 
     let rstb_build_dir = match cla.value_of("rstb-build") {
         Some(rel_path) => current_dir
@@ -98,6 +108,27 @@ fn main() {
             .args(vec!["build", "--release"])
             .spawn().unwrap();
         proc.wait().unwrap();
+    }
+
+    let mut tests = Vec::new();
+    for j in 0..test_paths.len() {
+        tests.push(simulator::TestEnv {
+            test_name: test_names[j].clone(),
+            test_path: test_paths[j].clone(),
+            rstb_build_dir: rstb_build_dir.clone(),
+            sim_build_dir: sim_build_dir.clone(),
+            force_compile,
+            config: test_configs[j].clone(),
+        });
+    }
+
+    let sim: Box<dyn simulator::Simulator> = match simulator {
+        "icarus" => Box::new(simulator::Icarus()),
+        _ => panic!()
+    };
+
+    for test in &tests {
+        // sim.build_test(test);
     }
 
     // Compile sources

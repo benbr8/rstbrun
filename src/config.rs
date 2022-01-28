@@ -3,18 +3,18 @@ use serde_derive::Deserialize;
 use toml;
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub test: Test,
     pub src: Src,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Src {
     pub verilog: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Test {
     pub toplevel: String,
 }
