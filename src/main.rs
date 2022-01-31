@@ -128,64 +128,64 @@ fn main() {
     };
 
     for test in &tests {
-        // sim.build_test(test);
+        sim.build_test(test);
     }
 
     // Compile sources
-    for j in 0..test_paths.len() {
-        let mut do_compile = force_compile;
-        let sim_dir = sim_build_dir.join(&test_names[j]);
-        let out_file = sim_dir.join("sim.vvp");
-        let mut out_file_ts = None;
-        if !out_file.exists() { 
-            do_compile = true;
-        } else {
-            out_file_ts = Some(out_file.metadata().unwrap().modified().unwrap());
-        }
-        let config = &test_configs[j];
-        std::fs::create_dir_all(&sim_dir).unwrap();
-        let mut args: Vec<String> = Vec::new();
-        args.append(&mut vec![
-            "-o".to_string(),
-            out_file.into_os_string().into_string().unwrap(),
-            "-s".to_string(),
-            config.test.toplevel.clone(),
-            "-g2012".to_string(),
-        ]);
+    // for j in 0..test_paths.len() {
+    //     let mut do_compile = force_compile;
+    //     let sim_dir = sim_build_dir.join(&test_names[j]);
+    //     let out_file = sim_dir.join("sim.vvp");
+    //     let mut out_file_ts = None;
+    //     if !out_file.exists() { 
+    //         do_compile = true;
+    //     } else {
+    //         out_file_ts = Some(out_file.metadata().unwrap().modified().unwrap());
+    //     }
+    //     let config = &test_configs[j];
+    //     std::fs::create_dir_all(&sim_dir).unwrap();
+    //     let mut args: Vec<String> = Vec::new();
+    //     args.append(&mut vec![
+    //         "-o".to_string(),
+    //         out_file.into_os_string().into_string().unwrap(),
+    //         "-s".to_string(),
+    //         config.test.toplevel.clone(),
+    //         "-g2012".to_string(),
+    //     ]);
 
-        let hdl_files = &config.src.verilog.clone().unwrap();
-        let mut newest_ts = None;
-        for f in hdl_files {
-            let file_path = test_paths[j].join(f);
-            let time_stamp = file_path.metadata().unwrap().modified().unwrap();
-            if newest_ts.is_none() {
-                newest_ts.replace(time_stamp);
-            } else if &time_stamp > newest_ts.as_ref().unwrap() {
-                newest_ts.replace(time_stamp);
-            }
-            let s = file_path.into_os_string().into_string().unwrap();
-            args.push(s);
-        }
-        if newest_ts.is_some() && out_file_ts.is_some() {
-            if newest_ts.unwrap() > out_file_ts.unwrap() {
-                do_compile = true;
-            }
-        }
+    //     let hdl_files = &config.src.verilog.clone().unwrap();
+    //     let mut newest_ts = None;
+    //     for f in hdl_files {
+    //         let file_path = test_paths[j].join(f);
+    //         let time_stamp = file_path.metadata().unwrap().modified().unwrap();
+    //         if newest_ts.is_none() {
+    //             newest_ts.replace(time_stamp);
+    //         } else if &time_stamp > newest_ts.as_ref().unwrap() {
+    //             newest_ts.replace(time_stamp);
+    //         }
+    //         let s = file_path.into_os_string().into_string().unwrap();
+    //         args.push(s);
+    //     }
+    //     if newest_ts.is_some() && out_file_ts.is_some() {
+    //         if newest_ts.unwrap() > out_file_ts.unwrap() {
+    //             do_compile = true;
+    //         }
+    //     }
 
-        if do_compile {
-            print!("Running command: iverilog");
-            for a in &args {
-                print!(" {}", a);
-            }
-            print!("\n");
-            let mut proc = std::process::Command::new("iverilog")
-                .current_dir(sim_dir.clone())
-                .stdout(std::process::Stdio::inherit())
-                .args(&args)
-                .spawn().unwrap();
-            proc.wait().unwrap();
-        }
-    }
+    //     if do_compile {
+    //         print!("Running command: iverilog");
+    //         for a in &args {
+    //             print!(" {}", a);
+    //         }
+    //         print!("\n");
+    //         let mut proc = std::process::Command::new("iverilog")
+    //             .current_dir(sim_dir.clone())
+    //             .stdout(std::process::Stdio::inherit())
+    //             .args(&args)
+    //             .spawn().unwrap();
+    //         proc.wait().unwrap();
+    //     }
+    // }
 
     // Run tests
     if !compile_only {

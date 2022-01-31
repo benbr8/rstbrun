@@ -12,8 +12,8 @@ pub(crate) struct TestEnv {
 }
 
 pub(crate) trait Simulator {
-    fn build_test(&self, test_env: &TestEnv);
-    fn run_test(&self);
+    fn build_test(&self, test: &TestEnv);
+    fn run_test(&self, test: &TestEnv);
 }
 
 
@@ -64,8 +64,19 @@ impl Simulator for Icarus {
         }
     }
 
-    fn run_test(&self) {
-        unimplemented!()
+    fn run_test(&self, test: &TestEnv) {
+        let mut lib_name = "lib".to_string();
+        lib_name.push_str(&test.test_name);
+        let mut lib_name_iverilog = lib_name.clone();
+        lib_name_iverilog.push_str(".vpi");
+        let mut lib_name_so = lib_name.clone();
+        lib_name_so.push_str(".so");
+
+        let sim_dir = test.sim_build_dir.join(test.test_name);
+        let lib_path_iverilog = test.rstb_build_dir.join("release").join(&lib_name_iverilog);
+        let lib_path_so = test.rstb_build_dir.join("release").join(&lib_name_so);
+        let _ = std::fs::remove_file(&lib_path_iverilog);
+        std::fs::copy(&lib_path_so, &lib_path_iverilog).unwrap();
     }
 }
 
