@@ -11,6 +11,7 @@ fn main() {
         .author("benbr8")
         .about("Executes Rstb tests and aggregates results.")
         .arg(Arg::with_name("simulator")
+            .long("simulator")
             .value_name("SIMULATOR")
             .help("Simulator to run the simulation.")
             .takes_value(true))
@@ -46,6 +47,7 @@ fn main() {
         Some(sim) => sim,
         None => "icarus"
     };
+    dbg!(simulator);
 
     let rstb_build_dir = match cla.value_of("rstb-build") {
         Some(rel_path) => current_dir
@@ -128,110 +130,19 @@ fn main() {
     };
 
     for test in &tests {
+
+        println!("# Building test: {}", test.test_name);
+        println!("-------------------------------------------------------------------");
         sim.build_test(test);
-    }
-
-    // Compile sources
-    // for j in 0..test_paths.len() {
-    //     let mut do_compile = force_compile;
-    //     let sim_dir = sim_build_dir.join(&test_names[j]);
-    //     let out_file = sim_dir.join("sim.vvp");
-    //     let mut out_file_ts = None;
-    //     if !out_file.exists() { 
-    //         do_compile = true;
-    //     } else {
-    //         out_file_ts = Some(out_file.metadata().unwrap().modified().unwrap());
-    //     }
-    //     let config = &test_configs[j];
-    //     std::fs::create_dir_all(&sim_dir).unwrap();
-    //     let mut args: Vec<String> = Vec::new();
-    //     args.append(&mut vec![
-    //         "-o".to_string(),
-    //         out_file.into_os_string().into_string().unwrap(),
-    //         "-s".to_string(),
-    //         config.test.toplevel.clone(),
-    //         "-g2012".to_string(),
-    //     ]);
-
-    //     let hdl_files = &config.src.verilog.clone().unwrap();
-    //     let mut newest_ts = None;
-    //     for f in hdl_files {
-    //         let file_path = test_paths[j].join(f);
-    //         let time_stamp = file_path.metadata().unwrap().modified().unwrap();
-    //         if newest_ts.is_none() {
-    //             newest_ts.replace(time_stamp);
-    //         } else if &time_stamp > newest_ts.as_ref().unwrap() {
-    //             newest_ts.replace(time_stamp);
-    //         }
-    //         let s = file_path.into_os_string().into_string().unwrap();
-    //         args.push(s);
-    //     }
-    //     if newest_ts.is_some() && out_file_ts.is_some() {
-    //         if newest_ts.unwrap() > out_file_ts.unwrap() {
-    //             do_compile = true;
-    //         }
-    //     }
-
-    //     if do_compile {
-    //         print!("Running command: iverilog");
-    //         for a in &args {
-    //             print!(" {}", a);
-    //         }
-    //         print!("\n");
-    //         let mut proc = std::process::Command::new("iverilog")
-    //             .current_dir(sim_dir.clone())
-    //             .stdout(std::process::Stdio::inherit())
-    //             .args(&args)
-    //             .spawn().unwrap();
-    //         proc.wait().unwrap();
-    //     }
-    // }
-
-    // Run tests
-    if !compile_only {
-        for name in &test_names {
-            println!("\n\n\n");
-            println!("###################################################################");
-            println!("# RUNNING TEST: {}", name);
-            println!("###################################################################\n");
-            // rename libs for iverilog
-            let mut lib_name = "lib".to_string();
-            lib_name.push_str(name);
-            let mut lib_name_iverilog = lib_name.clone();
-            lib_name_iverilog.push_str(".vpi");
-            let mut lib_name_so = lib_name.clone();
-            lib_name_so.push_str(".so");
-
-            let sim_dir = sim_build_dir.join(name);
-            let lib_path_iverilog = rstb_build_dir.join("release").join(&lib_name_iverilog);
-            let lib_path_so = rstb_build_dir.join("release").join(&lib_name_so);
-            let _ = std::fs::remove_file(&lib_path_iverilog);
-            std::fs::copy(lib_path_so, &lib_path_iverilog).unwrap();
-
-            // run tests
-            let rstb_build_dir_string = rstb_build_dir.join("release").into_os_string().into_string().unwrap();
-            let test_bin = sim_dir.join("sim.vvp").into_os_string().into_string().unwrap();
-            
-            let args = vec![
-                "-M".to_string(),
-                rstb_build_dir_string,
-                "-m".to_string(),
-                lib_name,
-                test_bin,
-            ];
-            print!("Running command: vvp");
-            for a in &args {
-                print!(" {}", a);
-            }
-            print!("\n");
-            let mut proc = std::process::Command::new("vvp")
-                .current_dir(sim_build_dir.join(name))
-                .stdout(std::process::Stdio::inherit())
-                .args(args)
-                .spawn().unwrap();
-            proc.wait().unwrap();
+        if !compile_only {
+            println!("\n");
+            println!("# Running test: {}", test.test_name);
+            println!("-------------------------------------------------------------------");
+            sim.run_test(test);
+            println!("\n\n");
         }
     }
+
 }
 
 fn get_test_names(test_paths: &Vec<PathBuf>) -> Vec<String> {
