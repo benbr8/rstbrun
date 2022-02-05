@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use serde_derive::Deserialize;
-use toml;
 
 
 #[derive(Deserialize, Debug, Clone)]
@@ -12,6 +11,7 @@ pub struct Config {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Src {
     pub verilog: Option<Vec<String>>,
+    pub vhdl: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

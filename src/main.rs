@@ -3,7 +3,7 @@ mod simulator;
 
 use clap::{App, Arg};
 use fancy_regex::Regex;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr, fs};
 
 fn main() {
     let cla = App::new("Rstb test runner")
@@ -20,15 +20,15 @@ fn main() {
             .help("Path(s) to test(s). Defaults to current directory.")
             .multiple(true)
             .takes_value(true))
-        .arg(Arg::with_name("rstb-build")
-            .long("rstb-build")
+        .arg(Arg::with_name("rstb-dir")
+            .long("rstb-dir")
             .value_name("FOLDER")
             .help("Folder where cargo build products are placed")
             .takes_value(true))
-        .arg(Arg::with_name("sim-build")
-            .long("sim-build")
+        .arg(Arg::with_name("sim-dir")
+            .long("sim-dir")
             .value_name("FOLDER")
-            .help("Folder where simulator build products are placed")
+            .help("Folder where simulator build and output products are placed")
             .takes_value(true))
         .arg(Arg::with_name("compile-only")
             .long("compile-only")
@@ -43,25 +43,22 @@ fn main() {
 
     let current_dir = std::env::current_dir().expect("Could not get working directory path.");
 
-    let simulator = match cla.value_of("simulator") {
-        Some(sim) => sim,
-        None => "icarus"
-    };
+    let simulator = cla.value_of("simulator").unwrap_or("icarus");
     dbg!(simulator);
 
-    let rstb_build_dir = match cla.value_of("rstb-build") {
+    let rstb_dir = match cla.value_of("rstb-dir") {
         Some(rel_path) => current_dir
             .join(rel_path)
             .canonicalize()
-            .expect("Argument 'rstb-build' is not a valid path."),
+            .expect("Argument 'rstb-dir' is not a valid path."),
         None => current_dir.join(".rstb_build"),
     };
 
-    let sim_build_dir = match cla.value_of("sim-build") {
+    let sim_dir = match cla.value_of("sim-dir") {
         Some(rel_path) => current_dir
             .join(rel_path)
             .canonicalize()
-            .expect("Argument 'sim-build' is not a valid path."),
+            .expect("Argument 'sim-dir' is not a valid path."),
         None => current_dir.join(".sim_build"),
     };
 
@@ -97,19 +94,9 @@ fn main() {
     // parse rstb.toml
     let mut test_configs = Vec::new();
     for test_path in &test_paths {
-        let config = config::parse_rstb_toml(&test_path.join("rstb.toml"));
+        let mut config = config::parse_rstb_toml(&test_path.join("rstb.toml"));
+        normalize_cfg(&mut config);
         test_configs.push(config);
-    }
-
-    // compile tests
-    for test_path in &test_paths {
-        let mut proc = std::process::Command::new("cargo")
-            .env("CARGO_TARGET_DIR", &rstb_build_dir.as_os_str())
-            .current_dir(test_path)
-            .stdout(std::process::Stdio::inherit())
-            .args(vec!["build", "--release"])
-            .spawn().unwrap();
-        proc.wait().unwrap();
     }
 
     let mut tests = Vec::new();
@@ -117,8 +104,8 @@ fn main() {
         tests.push(simulator::TestEnv {
             test_name: test_names[j].clone(),
             test_path: test_paths[j].clone(),
-            rstb_build_dir: rstb_build_dir.clone(),
-            sim_build_dir: sim_build_dir.clone(),
+            rstb_dir: rstb_dir.clone(),
+            sim_dir: sim_dir.clone(),
             force_compile,
             config: test_configs[j].clone(),
         });
@@ -145,7 +132,7 @@ fn main() {
 
 }
 
-fn get_test_names(test_paths: &Vec<PathBuf>) -> Vec<String> {
+fn get_test_names(test_paths: &[PathBuf]) -> Vec<String> {
     let re_crate_name = Regex::new(r#"name = "(\S*)""#).unwrap();
     let mut test_names = Vec::new();
     for test_path in test_paths {
@@ -172,4 +159,18 @@ fn find_tests_in_path(target_path: PathBuf, test_paths: &mut Vec<PathBuf>) {
             }
         }
     }
+}
+
+fn normalize_cfg(cfg: &mut config::Config) {
+    if let Some(src) = &mut cfg.src.verilog {
+        for path in src {
+            normalize_path(path);
+        }
+    }
+}
+
+fn normalize_path(path: &mut String) {
+    let pb = PathBuf::from_str(path).expect("Given path does not exist.");
+    let abs_path = fs::canonicalize(&path).expect("Could not get absolute path.");
+    *path = abs_path.into_os_string().into_string().unwrap();
 }

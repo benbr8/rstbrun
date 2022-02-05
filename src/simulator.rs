@@ -1,12 +1,13 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
+use std::env;
 use crate::config::Config;
 
-
+#[derive(Debug)]
 pub(crate) struct TestEnv {
     pub test_name: String,
     pub test_path: PathBuf,
-    pub rstb_build_dir: PathBuf,
-    pub sim_build_dir: PathBuf,
+    pub rstb_dir: PathBuf,
+    pub sim_dir: PathBuf,
     pub force_compile: bool,
     pub config: Config,
 }
@@ -17,13 +18,27 @@ pub(crate) trait Simulator {
 }
 
 
-pub struct Icarus ();
+pub(crate) struct Verilator ();
+
+// impl Simulator for  Verilator {
+//     fn build_test(&self, test: &TestEnv) {
+//         // create c++
+//         let vl_path = env::var("VL_PATH")
+//             .expect("VL_PATH environment variable not set.");
+
+
+
+//     }
+// }
+
+pub(crate) struct Icarus ();
 
 impl Simulator for Icarus {
     fn build_test(&self, test: &TestEnv) {
+        dbg!(test);
         // build rust
         let mut proc = std::process::Command::new("cargo")
-            .env("CARGO_TARGET_DIR", &test.rstb_build_dir.as_os_str())
+            .env("CARGO_TARGET_DIR", &test.rstb_dir.as_os_str())
             .current_dir(&test.test_path)
             .stdout(std::process::Stdio::inherit())
             .args(vec!["build", "--release"])
@@ -32,7 +47,7 @@ impl Simulator for Icarus {
 
 
         // build hdl
-        let sim_dir = test.sim_build_dir.join(&test.test_name);
+        let sim_dir = test.sim_dir.join(&test.test_name);
         let out_file = sim_dir.join("sim.vvp");
 
         std::fs::create_dir_all(&sim_dir).unwrap();
@@ -47,9 +62,11 @@ impl Simulator for Icarus {
         ]);
 
         let mut hdl_paths = Vec::new();
-        for f in &test.config.src.verilog.clone().unwrap() {
-            hdl_paths.push(test.test_path.join(f));
+        for s in &test.config.src.verilog.expect("No Verilog sources given.") {
+            let a = PathBuf::from_str(s).expect("Given source file does not exist");
+            hdl_paths.push(a);
         }
+
 
         let mut do_compile = test.force_compile;
         if outdated(&[out_file], &hdl_paths) {
@@ -83,19 +100,19 @@ impl Simulator for Icarus {
         let mut lib_name_so = lib_name.clone();
         lib_name_so.push_str(".so");
 
-        let sim_dir = test.sim_build_dir.join(&test.test_name);
-        let lib_path_iverilog = test.rstb_build_dir.join("release").join(&lib_name_iverilog);
-        let lib_path_so = test.rstb_build_dir.join("release").join(&lib_name_so);
+        let sim_dir = test.sim_dir.join(&test.test_name);
+        let lib_path_iverilog = test.rstb_dir.join("release").join(&lib_name_iverilog);
+        let lib_path_so = test.rstb_dir.join("release").join(&lib_name_so);
         let _ = std::fs::remove_file(&lib_path_iverilog);
         std::fs::copy(&lib_path_so, &lib_path_iverilog).unwrap();
 
         // run tests
-        let rstb_build_dir_string = test.rstb_build_dir.join("release").into_os_string().into_string().unwrap();
+        let rstb_dir_string = test.rstb_dir.join("release").into_os_string().into_string().unwrap();
         let test_bin = sim_dir.join("sim.vvp").into_os_string().into_string().unwrap();
 
         let args = vec![
             "-M".to_string(),
-            rstb_build_dir_string,
+            rstb_dir_string,
             "-m".to_string(),
             lib_name,
             test_bin,
@@ -107,7 +124,7 @@ impl Simulator for Icarus {
         }
         println!(" ");
         let mut proc = std::process::Command::new("vvp")
-            .current_dir(test.sim_build_dir.join(&test.test_name))
+            .current_dir(test.sim_dir.join(&test.test_name))
             .stdout(std::process::Stdio::inherit())
             .args(args)
             .spawn().unwrap();
