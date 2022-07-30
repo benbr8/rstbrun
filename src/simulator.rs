@@ -1,5 +1,4 @@
 use std::{path::PathBuf, str::FromStr};
-use std::env;
 use crate::config::Config;
 
 #[derive(Debug)]
@@ -18,7 +17,7 @@ pub(crate) trait Simulator {
 }
 
 
-pub(crate) struct Verilator ();
+// pub(crate) struct Verilator ();
 
 // impl Simulator for  Verilator {
 //     fn build_test(&self, test: &TestEnv) {

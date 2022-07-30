@@ -3,7 +3,7 @@ mod simulator;
 
 use clap::{App, Arg};
 use fancy_regex::Regex;
-use std::{path::PathBuf, str::FromStr, fs};
+use std::{path::PathBuf, fs};
 
 fn main() {
     let cla = App::new("Rstb test runner")
@@ -170,7 +170,6 @@ fn normalize_cfg(cfg: &mut config::Config) {
 }
 
 fn normalize_path(path: &mut String) {
-    let pb = PathBuf::from_str(path).expect("Given path does not exist.");
     let abs_path = fs::canonicalize(&path).expect("Could not get absolute path.");
     *path = abs_path.into_os_string().into_string().unwrap();
 }
