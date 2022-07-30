@@ -62,19 +62,22 @@ impl Simulator for Icarus {
         ]);
 
         let mut hdl_paths = Vec::new();
-        for s in &test.config.src.verilog.expect("No Verilog sources given.") {
-            let a = PathBuf::from_str(s).expect("Given source file does not exist");
-            hdl_paths.push(a);
+        if let Some(verilog) = test.config.src.verilog.as_ref() {
+            for s in verilog {
+                let a = PathBuf::from_str(s).expect("Given source file does not exist");
+                hdl_paths.push(a);
+            }
+        } else {
+            panic!("No Verilog sources given.");
         }
-
 
         let mut do_compile = test.force_compile;
         if outdated(&[out_file], &hdl_paths) {
             do_compile = true;
         }
 
-        for f in hdl_paths {
-            args.push(f.into_os_string().into_string().unwrap());
+        for file in hdl_paths {
+            args.push(file.into_os_string().into_string().unwrap());
         }
 
         if do_compile {
